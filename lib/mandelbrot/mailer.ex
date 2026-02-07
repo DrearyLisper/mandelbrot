@@ -1,0 +1,3 @@
+defmodule Mandelbrot.Mailer do
+  use Swoosh.Mailer, otp_app: :mandelbrot
+end
