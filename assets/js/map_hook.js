@@ -28,6 +28,8 @@ const MapHook = {
     this._onTouchMove = this._handleTouchMove.bind(this);
     this._onTouchEnd = this._handleTouchEnd.bind(this);
 
+    this.statusEl = document.getElementById("map-status");
+
     this.container.addEventListener("mousedown", (e) => this._handleMouseDown(e));
     this.container.addEventListener("wheel", (e) => this._handleWheel(e), { passive: false });
     this.container.addEventListener("touchstart", (e) => this._handleTouchStart(e), { passive: false });
@@ -126,6 +128,16 @@ const MapHook = {
         this.tiles.delete(key);
       }
     }
+
+    this._updateStatus();
+  },
+
+  _updateStatus() {
+    if (!this.statusEl) return;
+    // Map viewport center to complex plane (same mapping as server)
+    const cr = (-2.5 + this.cx * 3.5).toFixed(10);
+    const ci = (-1.75 + this.cy * 3.5).toFixed(10);
+    this.statusEl.textContent = `z=${this.zoom}  re=${cr}  im=${ci}`;
   },
 
   // --- Mouse events ---
