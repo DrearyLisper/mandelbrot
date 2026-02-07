@@ -31,15 +31,42 @@ defmodule MandelbrotWeb.TileController do
     encode_png(pixels)
   end
 
-  # Returns an {r, g, b} binary for the pixel at global coordinates (x, y)
-  # at zoom level z. Replace this with your own logic.
+  # Map global pixel coordinates to the complex plane and compute Mandelbrot.
+  # At zoom 0 the full world covers real [-2.5, 1.0] x imag [-1.75, 1.75].
   defp pixel_color(z, x, y) do
-    # Placeholder: simple gradient based on position
     world_size = @tile_size * Bitwise.bsl(1, z)
-    r = trunc(x / world_size * 255)
-    g = trunc(y / world_size * 255)
-    b = rem(z * 40, 256)
-    <<r, g, b>>
+    cr = -2.5 + x / world_size * 3.5
+    ci = -1.75 + y / world_size * 3.5
+
+    max_iter = 100 + z * 50
+    {n, zr, zi} = mandelbrot_iterate(cr, ci, 0.0, 0.0, 0, max_iter)
+
+    if n == max_iter do
+      <<0, 0, 0>>
+    else
+      # Smooth iteration count for continuous coloring
+      log_zn = :math.log(zr * zr + zi * zi) / 2.0
+      smooth = n + 1 - :math.log2(log_zn / :math.log(2))
+      t = smooth * 0.05
+
+      r = trunc((0.5 + 0.5 * :math.cos(6.2832 * (t + 0.00))) * 255)
+      g = trunc((0.5 + 0.5 * :math.cos(6.2832 * (t + 0.15))) * 255)
+      b = trunc((0.5 + 0.5 * :math.cos(6.2832 * (t + 0.35))) * 255)
+      <<r, g, b>>
+    end
+  end
+
+  defp mandelbrot_iterate(_cr, _ci, zr, zi, n, max) when n >= max, do: {n, zr, zi}
+
+  defp mandelbrot_iterate(cr, ci, zr, zi, n, max) do
+    zr2 = zr * zr
+    zi2 = zi * zi
+
+    if zr2 + zi2 > 4.0 do
+      {n, zr, zi}
+    else
+      mandelbrot_iterate(cr, ci, zr2 - zi2 + cr, 2.0 * zr * zi + ci, n + 1, max)
+    end
   end
 
   # Encodes raw RGB pixel data as a PNG.
