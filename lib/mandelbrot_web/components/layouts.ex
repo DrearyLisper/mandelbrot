@@ -73,6 +73,16 @@ defmodule MandelbrotWeb.Layouts do
   end
 
   @doc """
+  Full-screen layout for the map view. No navbar or padding.
+  """
+  def map(assigns) do
+    ~H"""
+    {@inner_content}
+    <.flash_group flash={@flash} />
+    """
+  end
+
+  @doc """
   Shows the flash group with standard titles and content.
 
   ## Examples

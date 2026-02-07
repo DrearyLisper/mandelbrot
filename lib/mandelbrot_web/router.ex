@@ -14,16 +14,17 @@ defmodule MandelbrotWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/tiles", MandelbrotWeb do
+    get "/:z/:x/:y", TileController, :show
+  end
+
   scope "/", MandelbrotWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live_session :map, layout: {MandelbrotWeb.Layouts, :map} do
+      live "/", MapLive
+    end
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", MandelbrotWeb do
-  #   pipe_through :api
-  # end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:mandelbrot, :dev_routes) do

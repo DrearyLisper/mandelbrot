@@ -103,3 +103,21 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* Full-viewport map: remove default body margin */
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Prevent text selection while dragging the map */
+#map {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Hide image alt text / broken image icon for loading tiles */
+#map img {
+  color: transparent;
+}
