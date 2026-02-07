@@ -28,8 +28,10 @@ defmodule MandelbrotWeb.TileController do
 
     pixels =
       for py <- 0..(render_size - 1), px <- 0..(render_size - 1), into: <<>> do
-        # Map render pixel back to world coordinates at tile_size scale
-        pixel_color(z, tile_x * @tile_size + px / dpr, tile_y * @tile_size + py / dpr)
+        # Compute global pixel coordinates at render resolution.
+        # Each tile covers render_size pixels, so global position is
+        # tile_index * render_size + local_pixel.
+        pixel_color(z, tile_x * render_size + px, tile_y * render_size + py, render_size)
       end
 
     encode_png(pixels, render_size)
@@ -37,8 +39,10 @@ defmodule MandelbrotWeb.TileController do
 
   # Map global pixel coordinates to the complex plane and compute Mandelbrot.
   # At zoom 0 the full world covers real [-2.5, 1.0] x imag [-1.75, 1.75].
-  defp pixel_color(z, x, y) do
-    world_size = @tile_size * Bitwise.bsl(1, z)
+  # render_size is the pixel size of each tile (256 * dpr).
+  defp pixel_color(z, x, y, render_size) do
+    # Total world size in render pixels at this zoom level
+    world_size = render_size * Bitwise.bsl(1, z)
     cr = -2.5 + x / world_size * 3.5
     ci = -1.75 + y / world_size * 3.5
 
