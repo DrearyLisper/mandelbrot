@@ -13,34 +13,70 @@ defmodule MandelbrotWeb.TileController do
     if x < 0 or y < 0 or x > max_coord or y > max_coord or z < 0 or z > 15 do
       send_resp(conn, 404, "Tile out of range")
     else
-      svg = generate_debug_tile(z, x, y)
+      png = generate_tile(z, x, y)
 
       conn
-      |> put_resp_content_type("image/svg+xml")
+      |> put_resp_content_type("image/png")
       |> put_resp_header("cache-control", "public, max-age=3600")
-      |> send_resp(200, svg)
+      |> send_resp(200, png)
     end
   end
 
-  defp generate_debug_tile(z, x, y) do
-    hue = rem(z * 47 + x * 13 + y * 29, 360)
+  defp generate_tile(z, tile_x, tile_y) do
+    pixels =
+      for py <- 0..(@tile_size - 1), px <- 0..(@tile_size - 1), into: <<>> do
+        pixel_color(z, tile_x * @tile_size + px, tile_y * @tile_size + py)
+      end
 
-    """
-    <svg xmlns="http://www.w3.org/2000/svg" width="#{@tile_size}" height="#{@tile_size}">
-      <rect width="#{@tile_size}" height="#{@tile_size}" fill="hsl(#{hue}, 30%, 85%)" />
-      <rect x="0" y="0" width="#{@tile_size}" height="#{@tile_size}"
-            fill="none" stroke="hsl(#{hue}, 30%, 55%)" stroke-width="1" />
-      <line x1="0" y1="0" x2="#{@tile_size}" y2="#{@tile_size}"
-            stroke="hsl(#{hue}, 20%, 75%)" stroke-width="0.5" />
-      <line x1="#{@tile_size}" y1="0" x2="0" y2="#{@tile_size}"
-            stroke="hsl(#{hue}, 20%, 75%)" stroke-width="0.5" />
-      <text x="128" y="105" text-anchor="middle" font-family="monospace" font-size="22" fill="#444">
-        z=#{z}
-      </text>
-      <text x="128" y="135" text-anchor="middle" font-family="monospace" font-size="18" fill="#555">
-        x=#{x} y=#{y}
-      </text>
-    </svg>
-    """
+    encode_png(pixels)
+  end
+
+  # Returns an {r, g, b} binary for the pixel at global coordinates (x, y)
+  # at zoom level z. Replace this with your own logic.
+  defp pixel_color(z, x, y) do
+    # Placeholder: simple gradient based on position
+    world_size = @tile_size * Bitwise.bsl(1, z)
+    r = trunc(x / world_size * 255)
+    g = trunc(y / world_size * 255)
+    b = rem(z * 40, 256)
+    <<r, g, b>>
+  end
+
+  # Encodes raw RGB pixel data as a PNG.
+  # Pixels must be @tile_size * @tile_size * 3 bytes (row-major, RGB).
+  defp encode_png(pixels) do
+    # Build filtered scanlines: each row gets a 0 (None filter) prefix
+    scanlines =
+      for row <- 0..(@tile_size - 1), into: <<>> do
+        offset = row * @tile_size * 3
+        <<0, binary_part(pixels, offset, @tile_size * 3)::binary>>
+      end
+
+    compressed = :zlib.compress(scanlines)
+
+    <<
+      # PNG signature
+      137, 80, 78, 71, 13, 10, 26, 10,
+      # IHDR chunk
+      png_chunk("IHDR", <<
+        @tile_size::32,
+        @tile_size::32,
+        8,  # bit depth
+        2,  # color type: RGB
+        0,  # compression method
+        0,  # filter method
+        0   # interlace method
+      >>)::binary,
+      # IDAT chunk
+      png_chunk("IDAT", compressed)::binary,
+      # IEND chunk
+      png_chunk("IEND", <<>>)::binary
+    >>
+  end
+
+  defp png_chunk(type, data) do
+    type_bin = type
+    crc = :erlang.crc32(<<type_bin::binary, data::binary>>)
+    <<byte_size(data)::32, type_bin::binary, data::binary, crc::32>>
   end
 end
