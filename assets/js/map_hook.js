@@ -32,6 +32,7 @@ const MapHook = {
     this.statusEl = document.getElementById("map-status");
 
     this.container.addEventListener("mousedown", (e) => this._handleMouseDown(e));
+    this.container.addEventListener("dblclick", (e) => this._handleDblClick(e));
     this.container.addEventListener("wheel", (e) => this._handleWheel(e), { passive: false });
     this.container.addEventListener("touchstart", (e) => this._handleTouchStart(e), { passive: false });
     // Attach move/up to window so dragging works even if cursor leaves the container
@@ -171,6 +172,37 @@ const MapHook = {
     this.container.style.cursor = "grab";
   },
 
+  // --- Double-click / double-tap zoom ---
+
+  _handleDblClick(e) {
+    e.preventDefault();
+    this._zoomToward(e.clientX, e.clientY, 1);
+  },
+
+  // Zoom by delta (+1 = in, -1 = out) toward a screen point
+  _zoomToward(clientX, clientY, delta) {
+    const rect = this.container.getBoundingClientRect();
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+    const cw = this.container.clientWidth;
+    const ch = this.container.clientHeight;
+
+    const ws = TILE_SIZE * (1 << this.zoom);
+    const centerPxX = this.cx * ws;
+    const centerPxY = this.cy * ws;
+    const mouseWorldX = (centerPxX - cw / 2 + mouseX) / ws;
+    const mouseWorldY = (centerPxY - ch / 2 + mouseY) / ws;
+
+    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.zoom + delta));
+    if (newZoom === this.zoom) return;
+
+    const newWs = TILE_SIZE * (1 << newZoom);
+    this.cx = mouseWorldX + (cw / 2 - mouseX) / newWs;
+    this.cy = mouseWorldY + (ch / 2 - mouseY) / newWs;
+    this.zoom = newZoom;
+    this._render();
+  },
+
   // --- Wheel zoom (toward cursor) ---
 
   _handleWheel(e) {
@@ -187,32 +219,23 @@ const MapHook = {
     const zoomDelta = this.scrollAccum > 0 ? -1 : 1;
     this.scrollAccum = 0;
 
-    const rect = this.container.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const cw = this.container.clientWidth;
-    const ch = this.container.clientHeight;
-
-    const ws = TILE_SIZE * (1 << this.zoom);
-    const centerPxX = this.cx * ws;
-    const centerPxY = this.cy * ws;
-    const mouseWorldX = (centerPxX - cw / 2 + mouseX) / ws;
-    const mouseWorldY = (centerPxY - ch / 2 + mouseY) / ws;
-
-    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.zoom + zoomDelta));
-    if (newZoom === this.zoom) return;
-
-    const newWs = TILE_SIZE * (1 << newZoom);
-    this.cx = mouseWorldX + (cw / 2 - mouseX) / newWs;
-    this.cy = mouseWorldY + (ch / 2 - mouseY) / newWs;
-    this.zoom = newZoom;
-    this._render();
+    this._zoomToward(e.clientX, e.clientY, zoomDelta);
   },
 
   // --- Touch events ---
 
   _handleTouchStart(e) {
     if (e.touches.length === 1) {
+      // Detect double-tap
+      const now = Date.now();
+      if (now - (this._lastTapTime || 0) < 300) {
+        this._zoomToward(e.touches[0].clientX, e.touches[0].clientY, 1);
+        this._lastTapTime = 0;
+        e.preventDefault();
+        return;
+      }
+      this._lastTapTime = now;
+
       this.dragging = true;
       this.pinchStartDist = null;
       this.lastX = e.touches[0].clientX;
