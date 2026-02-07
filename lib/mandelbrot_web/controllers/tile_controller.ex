@@ -14,7 +14,14 @@ defmodule MandelbrotWeb.TileController do
     if x < 0 or y < 0 or x > max_coord or y > max_coord or z < 0 or z > 45 do
       send_resp(conn, 404, "Tile out of range")
     else
-      png = generate_tile(z, x, y, dpr)
+      png =
+        case Mandelbrot.TileCache.get(z, x, y, dpr) do
+          {:ok, cached} -> cached
+          :miss ->
+            tile = generate_tile(z, x, y, dpr)
+            Mandelbrot.TileCache.put(z, x, y, dpr, tile)
+            tile
+        end
 
       conn
       |> put_resp_content_type("image/png")

@@ -11,8 +11,7 @@ defmodule Mandelbrot.Application do
       MandelbrotWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:mandelbrot, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Mandelbrot.PubSub},
-      # Start a worker by calling: Mandelbrot.Worker.start_link(arg)
-      # {Mandelbrot.Worker, arg},
+      Mandelbrot.TileCache,
       # Start to serve requests, typically the last entry
       MandelbrotWeb.Endpoint
     ]
