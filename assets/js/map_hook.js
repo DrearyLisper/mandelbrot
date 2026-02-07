@@ -5,9 +5,11 @@ const SCROLL_THRESHOLD = 300; // accumulated deltaY needed to change one zoom le
 
 const MapHook = {
   mounted() {
+    // Default viewport — overridden by URL hash if present
     this.cx = 0.5;
     this.cy = 0.5;
     this.zoom = 2;
+    this._readHash();
 
     this.container = this.el;
     this.tileLayer = document.createElement("div");
@@ -140,6 +142,37 @@ const MapHook = {
     const cr = (-2.5 + this.cx * 3.5).toFixed(10);
     const ci = (-1.75 + this.cy * 3.5).toFixed(10);
     this.statusEl.textContent = `z=${this.zoom}  re=${cr}  im=${ci}`;
+    this._updateHash();
+  },
+
+  // --- URL hash: #zoom/real/imag ---
+
+  _readHash() {
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return;
+
+    const parts = hash.split("/");
+    if (parts.length !== 3) return;
+
+    const z = parseInt(parts[0], 10);
+    const re = parseFloat(parts[1]);
+    const im = parseFloat(parts[2]);
+
+    if (isNaN(z) || isNaN(re) || isNaN(im)) return;
+
+    this.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
+    // Reverse the complex-plane-to-world mapping:
+    // re = -2.5 + cx * 3.5  =>  cx = (re + 2.5) / 3.5
+    // im = -1.75 + cy * 3.5  =>  cy = (im + 1.75) / 3.5
+    this.cx = (re + 2.5) / 3.5;
+    this.cy = (im + 1.75) / 3.5;
+  },
+
+  _updateHash() {
+    const re = (-2.5 + this.cx * 3.5).toFixed(10);
+    const im = (-1.75 + this.cy * 3.5).toFixed(10);
+    const hash = `#${this.zoom}/${re}/${im}`;
+    history.replaceState(null, "", hash);
   },
 
   // --- Mouse events ---
