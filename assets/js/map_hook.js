@@ -1,6 +1,6 @@
 const TILE_SIZE = 256;
 const MIN_ZOOM = 0;
-const MAX_ZOOM = 15;
+const MAX_ZOOM = 45;
 const SCROLL_THRESHOLD = 300; // accumulated deltaY needed to change one zoom level
 
 const MapHook = {

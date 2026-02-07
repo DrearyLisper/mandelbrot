@@ -10,7 +10,7 @@ defmodule MandelbrotWeb.TileController do
 
     max_coord = Bitwise.bsl(1, z) - 1
 
-    if x < 0 or y < 0 or x > max_coord or y > max_coord or z < 0 or z > 15 do
+    if x < 0 or y < 0 or x > max_coord or y > max_coord or z < 0 or z > 45 do
       send_resp(conn, 404, "Tile out of range")
     else
       png = generate_tile(z, x, y)
