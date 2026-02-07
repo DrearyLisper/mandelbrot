@@ -21,6 +21,7 @@ const MapHook = {
     this.pinchStartDist = null;
     this.pinchStartZoom = 0;
     this.scrollAccum = 0;
+    this.dpr = Math.min(3, Math.max(1, Math.floor(window.devicePixelRatio || 1)));
 
     // Bind handlers for proper cleanup
     this._onMouseMove = this._handleMouseMove.bind(this);
@@ -105,7 +106,7 @@ const MapHook = {
         let img = this.tiles.get(key);
         if (!img) {
           img = document.createElement("img");
-          img.src = `/tiles/${this.zoom}/${tx}/${ty}`;
+          img.src = `/tiles/${this.zoom}/${tx}/${ty}/${this.dpr}`;
           img.style.cssText = `position:absolute;width:${TILE_SIZE}px;height:${TILE_SIZE}px;`;
           img.draggable = false;
           this.tileLayer.appendChild(img);

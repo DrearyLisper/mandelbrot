@@ -15,7 +15,7 @@ defmodule MandelbrotWeb.Router do
   end
 
   scope "/tiles", MandelbrotWeb do
-    get "/:z/:x/:y", TileController, :show
+    get "/:z/:x/:y/:dpr", TileController, :show
   end
 
   scope "/", MandelbrotWeb do
