@@ -7,7 +7,7 @@ defmodule MandelbrotWeb.TileController do
     z = String.to_integer(z_str)
     x = String.to_integer(x_str)
     y = String.to_integer(y_str)
-    dpr = dpr_str |> String.to_integer() |> max(1) |> min(3)
+    dpr = dpr_str |> String.to_integer() |> max(0) |> min(3)
 
     max_coord = Bitwise.bsl(1, z) - 1
 
@@ -30,8 +30,11 @@ defmodule MandelbrotWeb.TileController do
     end
   end
 
+  @preview_size 64
+
   defp generate_tile(z, tile_x, tile_y, dpr) do
-    render_size = @tile_size * dpr
+    # dpr=0 is a fast 64x64 preview; dpr=1-3 are full resolution
+    render_size = if(dpr == 0, do: @preview_size, else: @tile_size * dpr)
 
     pixels =
       for py <- 0..(render_size - 1), px <- 0..(render_size - 1), into: <<>> do

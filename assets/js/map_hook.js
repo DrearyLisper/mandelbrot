@@ -104,31 +104,51 @@ const MapHook = {
         const key = `${this.zoom}/${tx}/${ty}`;
         needed.add(key);
 
-        // Reuse cached <img> if we already created one for this tile,
-        // otherwise create a new one and start loading it.
-        let img = this.tiles.get(key);
-        if (!img) {
-          img = document.createElement("img");
-          img.src = `/tiles/${this.zoom}/${tx}/${ty}/${this.dpr}`;
-          img.style.cssText = `position:absolute;width:${TILE_SIZE}px;height:${TILE_SIZE}px;`;
-          img.draggable = false;
-          this.tileLayer.appendChild(img);
-          this.tiles.set(key, img);
+        // Reuse cached entry if we already created one for this tile,
+        // otherwise create preview (dpr=0) + full (dpr=actual) image pair.
+        let entry = this.tiles.get(key);
+        if (!entry) {
+          const baseCss = `position:absolute;width:${TILE_SIZE}px;height:${TILE_SIZE}px;`;
+
+          // Fast 64x64 preview — shown immediately, stretched to tile size
+          const preview = document.createElement("img");
+          preview.src = `/tiles/${this.zoom}/${tx}/${ty}/0`;
+          preview.style.cssText = baseCss + "image-rendering:pixelated;";
+          preview.draggable = false;
+          this.tileLayer.appendChild(preview);
+
+          // Full resolution tile — replaces preview when loaded
+          const full = document.createElement("img");
+          full.src = `/tiles/${this.zoom}/${tx}/${ty}/${this.dpr}`;
+          full.style.cssText = baseCss + "display:none;";
+          full.draggable = false;
+          full.onload = () => {
+            full.style.display = "";
+            preview.remove();
+          };
+          this.tileLayer.appendChild(full);
+
+          entry = { preview, full };
+          this.tiles.set(key, entry);
         }
 
-        // Position the tile relative to the container's top-left corner.
+        // Position both images relative to the container's top-left corner.
         // The tile's world-pixel origin is (tx * TILE_SIZE, ty * TILE_SIZE);
         // subtracting topLeft converts to container-local coordinates.
-        img.style.left = `${tx * TILE_SIZE - topLeftX}px`;
-        img.style.top = `${ty * TILE_SIZE - topLeftY}px`;
+        const left = `${tx * TILE_SIZE - topLeftX}px`;
+        const top = `${ty * TILE_SIZE - topLeftY}px`;
+        if (entry.preview) { entry.preview.style.left = left; entry.preview.style.top = top; }
+        entry.full.style.left = left;
+        entry.full.style.top = top;
       }
     }
 
     // Remove tiles that are no longer visible (different zoom level
     // or scrolled out of view). This keeps the DOM lean.
-    for (const [key, img] of this.tiles) {
+    for (const [key, entry] of this.tiles) {
       if (!needed.has(key)) {
-        img.remove();
+        if (entry.preview) entry.preview.remove();
+        entry.full.remove();
         this.tiles.delete(key);
       }
     }
