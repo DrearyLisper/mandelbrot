@@ -65,11 +65,16 @@ defmodule MandelbrotWeb.TileController do
       # Smooth iteration count for continuous coloring
       log_zn = :math.log(zr * zr + zi * zi) / 2.0
       smooth = n + 1 - :math.log2(log_zn / :math.log(2))
-      t = smooth * 0.05
+      t = :math.fmod(smooth, 64.0) / 64.0
 
-      r = trunc((0.5 + 0.5 * :math.cos(6.2832 * (t + 0.00))) * 255)
-      g = trunc((0.5 + 0.5 * :math.cos(6.2832 * (t + 0.15))) * 255)
-      b = trunc((0.5 + 0.5 * :math.cos(6.2832 * (t + 0.35))) * 255)
+      {r, g, b} =
+        cond do
+          t < 0.16 -> {trunc(t / 0.16 * 32), trunc(t / 0.16 * 107), trunc(t / 0.16 * 203)}
+          t < 0.42 -> {trunc(32 + (t - 0.16) / 0.26 * 205), trunc(107 + (t - 0.16) / 0.26 * 148), trunc(203 + (t - 0.16) / 0.26 * 52)}
+          t < 0.64 -> {trunc(237 + (t - 0.42) / 0.22 * 18), trunc(255 - (t - 0.42) / 0.22 * 170), trunc(255 - (t - 0.42) / 0.22 * 255)}
+          true -> {trunc(255 - (t - 0.64) / 0.36 * 255), trunc(85 - (t - 0.64) / 0.36 * 85), trunc((t - 0.64) / 0.36 * 0)}
+        end
+
       <<r, g, b>>
     end
   end
